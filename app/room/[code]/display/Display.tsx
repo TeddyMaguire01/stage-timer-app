@@ -27,12 +27,12 @@ export default function Display({ code }: { code: string }) {
         isOvertime ? "animate-flash" : "bg-black"
       }`}
     >
-      {!connected && <div className="text-sm text-neutral-500">Connecting…</div>}
-      {connected && !activeTimer && <div className="text-xl text-neutral-500">Waiting for timer…</div>}
+      {!connected && <div className="text-sm text-stone-500">Connecting…</div>}
+      {connected && !activeTimer && <div className="text-xl text-stone-500">Waiting for timer…</div>}
 
       {activeTimer && (
         <>
-          <div className="text-2xl text-neutral-400">{activeTimer.name}</div>
+          <div className="text-2xl text-stone-400">{activeTimer.name}</div>
           <div className={`font-mono text-[18vw] font-bold leading-none tabular-nums ${colorClass}`}>
             {formatClock(remaining)}
           </div>

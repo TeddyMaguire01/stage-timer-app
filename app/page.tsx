@@ -30,22 +30,22 @@ export default function HomePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center gap-10 px-6">
       <div className="text-center">
-        <h1 className="font-mono text-4xl font-bold tracking-tight text-white">Stage Timer</h1>
-        <p className="mt-2 text-neutral-400">Real-time countdowns for live events</p>
+        <h1 className="font-mono text-4xl font-bold tracking-tight text-stone-50">Stage Timer</h1>
+        <p className="mt-2 text-stone-400">Real-time countdowns for live events</p>
       </div>
 
-      <div className="w-full max-w-sm rounded-2xl border border-neutral-800 bg-neutral-900 p-6">
+      <div className="w-full max-w-sm rounded-md border border-stone-800 bg-stone-900 p-6">
         <button
           onClick={createRoom}
-          className="w-full rounded-xl bg-emerald-500 px-4 py-3 font-semibold text-black transition hover:bg-emerald-400"
+          className="w-full rounded-md bg-clay-500 px-4 py-3 font-semibold text-stone-950 transition hover:bg-clay-400"
         >
           Create a new room
         </button>
 
-        <div className="my-6 flex items-center gap-3 text-neutral-600">
-          <div className="h-px flex-1 bg-neutral-800" />
+        <div className="my-6 flex items-center gap-3 text-stone-600">
+          <div className="h-px flex-1 bg-stone-800" />
           <span className="text-xs uppercase tracking-widest">or view a room</span>
-          <div className="h-px flex-1 bg-neutral-800" />
+          <div className="h-px flex-1 bg-stone-800" />
         </div>
 
         <div className="flex gap-2">
@@ -55,11 +55,11 @@ export default function HomePage() {
             onKeyDown={(e) => e.key === "Enter" && joinRoom()}
             placeholder="Room code"
             maxLength={6}
-            className="flex-1 rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 font-mono uppercase tracking-widest text-white outline-none focus:border-emerald-500"
+            className="flex-1 rounded-md border border-stone-700 bg-stone-950 px-3 py-2 font-mono uppercase tracking-widest text-stone-50 outline-none focus:border-clay-500"
           />
           <button
             onClick={joinRoom}
-            className="rounded-lg border border-neutral-700 px-4 py-2 text-white hover:border-emerald-500"
+            className="rounded-md border border-stone-700 px-4 py-2 text-stone-50 hover:border-clay-500"
           >
             View
           </button>

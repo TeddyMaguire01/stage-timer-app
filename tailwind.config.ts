@@ -14,6 +14,11 @@ const config: Config = {
           amber: "#f59e0b",
           red: "#ef4444",
         },
+        clay: {
+          400: "#D99075",
+          500: "#CC785C",
+          600: "#B35F45",
+        },
       },
       keyframes: {
         flash: {
