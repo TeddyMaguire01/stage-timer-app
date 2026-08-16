@@ -9,6 +9,8 @@ export interface TimerState {
   /** Epoch ms of the last status/adjustment change. */
   changedAt: number;
   status: TimerStatus;
+  /** If set, this timer auto-starts and becomes the active display timer the moment this timer hits zero. */
+  linkedNextId: string | null;
 }
 
 export interface FlagState {
@@ -36,6 +38,12 @@ export interface ClientToServerEvents {
   "timer:reset": (payload: { code: string; id: string }) => void;
   "timer:adjust": (payload: { code: string; id: string; deltaSec: number }) => void;
   "timer:rename": (payload: { code: string; id: string; name: string }) => void;
+  /** Sets the timer's total length directly (both the countdown baseline and remaining time). */
+  "timer:setDuration": (payload: { code: string; id: string; durationSec: number }) => void;
+  /** Sets the timer's length so it hits zero at this wall-clock time (epoch ms). */
+  "timer:setFinishTime": (payload: { code: string; id: string; finishAt: number }) => void;
+  /** Sets (or clears, with nextId: null) which timer auto-starts when this one hits zero. */
+  "timer:link": (payload: { code: string; id: string; nextId: string | null }) => void;
   "flag:send": (payload: { code: string; message: string }) => void;
   "flag:clear": (payload: { code: string }) => void;
 }

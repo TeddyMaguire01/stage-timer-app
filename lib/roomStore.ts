@@ -17,7 +17,7 @@ function findTimer(room: RoomState, id: string): TimerState | undefined {
 }
 
 /** Remaining seconds right now, given the timer's last recorded checkpoint. */
-function currentRemaining(timer: TimerState): number {
+export function currentRemaining(timer: TimerState): number {
   if (timer.status === "running") {
     const elapsedSec = (Date.now() - timer.changedAt) / 1000;
     return timer.remainingAtChange - elapsedSec;
@@ -25,10 +25,27 @@ function currentRemaining(timer: TimerState): number {
   return timer.remainingAtChange;
 }
 
+/** True if walking nextId's chain from `id` would loop back to `id`. */
+function wouldCreateCycle(room: RoomState, id: string, nextId: string): boolean {
+  let cursor: string | null = nextId;
+  const seen = new Set<string>();
+  while (cursor) {
+    if (cursor === id) return true;
+    if (seen.has(cursor)) return true;
+    seen.add(cursor);
+    cursor = findTimer(room, cursor)?.linkedNextId ?? null;
+  }
+  return false;
+}
+
 export function createRoomStore() {
   return {
     getState(code: string): RoomState {
       return ensureRoom(code);
+    },
+
+    getTimer(code: string, id: string): TimerState | undefined {
+      return findTimer(ensureRoom(code), id);
     },
 
     createTimer(code: string, name: string, durationSec: number) {
@@ -40,6 +57,7 @@ export function createRoomStore() {
         remainingAtChange: durationSec,
         changedAt: Date.now(),
         status: "idle",
+        linkedNextId: null,
       };
       room.timers.push(timer);
       if (!room.activeTimerId) room.activeTimerId = timer.id;
@@ -48,6 +66,9 @@ export function createRoomStore() {
     deleteTimer(code: string, id: string) {
       const room = ensureRoom(code);
       room.timers = room.timers.filter((t) => t.id !== id);
+      for (const t of room.timers) {
+        if (t.linkedNextId === id) t.linkedNextId = null;
+      }
       if (room.activeTimerId === id) {
         room.activeTimerId = room.timers[0]?.id ?? null;
       }
@@ -97,6 +118,42 @@ export function createRoomStore() {
       if (!timer) return;
       timer.remainingAtChange = currentRemaining(timer) + deltaSec;
       timer.changedAt = Date.now();
+    },
+
+    /** Sets the timer's total length directly — redefines both the color/% baseline and remaining time. */
+    setDuration(code: string, id: string, durationSec: number) {
+      const room = ensureRoom(code);
+      const timer = findTimer(room, id);
+      if (!timer || durationSec <= 0) return;
+      timer.durationSec = durationSec;
+      timer.remainingAtChange = durationSec;
+      timer.changedAt = Date.now();
+    },
+
+    /** Sets the timer's length so it hits zero at the given wall-clock time. */
+    setFinishTime(code: string, id: string, finishAt: number) {
+      const room = ensureRoom(code);
+      const timer = findTimer(room, id);
+      if (!timer) return;
+      const durationSec = Math.max(1, Math.round((finishAt - Date.now()) / 1000));
+      timer.durationSec = durationSec;
+      timer.remainingAtChange = durationSec;
+      timer.changedAt = Date.now();
+    },
+
+    /** Links this timer to auto-start `nextId` (or clears the link if nextId is null). */
+    setLink(code: string, id: string, nextId: string | null) {
+      const room = ensureRoom(code);
+      const timer = findTimer(room, id);
+      if (!timer) return;
+      if (nextId === null) {
+        timer.linkedNextId = null;
+        return;
+      }
+      if (nextId === id) return;
+      if (!findTimer(room, nextId)) return;
+      if (wouldCreateCycle(room, id, nextId)) return;
+      timer.linkedNextId = nextId;
     },
 
     setFlag(code: string, message: string) {

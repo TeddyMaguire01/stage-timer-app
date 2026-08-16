@@ -29,3 +29,35 @@ export function formatClock(totalSeconds: number): string {
   }
   return `+${formatUnits(Math.floor(Math.abs(totalSeconds)))}`;
 }
+
+/** Wall-clock epoch ms this timer will hit zero, counting down from right now. */
+export function finishTimeMs(timer: TimerState, clockOffsetMs: number): number {
+  const now = Date.now() + clockOffsetMs;
+  return now + remainingSeconds(timer, clockOffsetMs) * 1000;
+}
+
+/** Formats an epoch ms as a local 24h HH:MM:SS wall-clock time. */
+export function formatTimeOfDay(epochMs: number): string {
+  const d = new Date(epochMs);
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/**
+ * Given an "HH:MM" string (as produced by <input type="time">), returns the
+ * next epoch ms that time occurs at — today if it hasn't passed yet, else
+ * tomorrow.
+ */
+export function nextOccurrenceOfTime(hhmm: string, clockOffsetMs: number): number | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  const now = new Date(Date.now() + clockOffsetMs);
+  const candidate = new Date(now);
+  candidate.setHours(hours, minutes, 0, 0);
+  if (candidate.getTime() <= now.getTime()) {
+    candidate.setDate(candidate.getDate() + 1);
+  }
+  return candidate.getTime() - clockOffsetMs;
+}
