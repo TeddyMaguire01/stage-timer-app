@@ -17,6 +17,36 @@ views are joined by a room code in the URL and stay in sync over WebSockets
   server restarts; fine for v1 / single-instance use)
 - Tailwind CSS, JetBrains Mono (digits) + Inter (UI) via `next/font/google`
 
+## Getting a GitHub account (skip if you already have one)
+
+You only need this to clone/push this repo — running the app locally doesn't
+require an account (cloning a *public* repo like this one works without
+being logged in at all).
+
+1. Go to [github.com/signup](https://github.com/signup).
+2. Enter an email, create a password, and pick a username. GitHub will ask
+   you to verify a short puzzle and confirm your email via a code it sends
+   you.
+3. Free tier is all you need — no payment info required.
+4. Install Git itself (the command-line tool, separate from the GitHub
+   account) if it's not already on your machine: download from
+   [git-scm.com/downloads](https://git-scm.com/downloads) and run the
+   installer with default options.
+5. Confirm both are working from a terminal:
+   ```bash
+   git --version
+   ```
+6. To push your *own* changes (not just clone this repo), tell git who you
+   are once per machine:
+   ```bash
+   git config --global user.name "Your Name"
+   git config --global user.email "you@example.com"
+   ```
+   The first time you `git push` to GitHub, it'll prompt you to sign in
+   through the browser (or ask for a personal access token instead of a
+   password, if you're using HTTPS remotes) — follow the prompt, it only
+   happens once per machine.
+
 ## Local dev setup
 
 **Prerequisite: Node.js 18.18+ and npm.** This machine didn't have Node
