@@ -43,6 +43,13 @@ export function formatTimeOfDay(epochMs: number): string {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+/** Current local time as "HH:MM", for pre-filling a time input. */
+export function currentHHMM(clockOffsetMs: number): string {
+  const d = new Date(Date.now() + clockOffsetMs);
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /**
  * Given an "HH:MM" string (as produced by <input type="time">), returns the
  * next epoch ms that time occurs at — today if it hasn't passed yet, else

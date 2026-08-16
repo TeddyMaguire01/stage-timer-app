@@ -13,6 +13,8 @@ const store = createRoomStore();
 
 /** Pending "auto-start the linked next timer" timeouts, keyed by `${code}:${id}`. */
 const autoChainTimers = new Map<string, ReturnType<typeof setTimeout>>();
+/** Pending "auto-start this timer itself at its scheduled time" timeouts, keyed by `${code}:${id}`. */
+const scheduledStartTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => handle(req, res));
@@ -54,19 +56,49 @@ app.prepare().then(() => {
     autoChainTimers.set(`${code}:${id}`, pending);
   };
 
+  const cancelScheduledStart = (code: string, id: string) => {
+    const key = `${code}:${id}`;
+    const pending = scheduledStartTimers.get(key);
+    if (pending) {
+      clearTimeout(pending);
+      scheduledStartTimers.delete(key);
+    }
+  };
+
+  const scheduleStart = (code: string, id: string) => {
+    cancelScheduledStart(code, id);
+    const timer = store.getTimer(code, id);
+    if (!timer || timer.status !== "idle" || !timer.scheduledStartAt) return;
+
+    const delayMs = timer.scheduledStartAt - Date.now();
+    const pending = setTimeout(() => {
+      scheduledStartTimers.delete(`${code}:${id}`);
+      const current = store.getTimer(code, id);
+      if (!current || current.status !== "idle" || !current.scheduledStartAt) return;
+      store.start(code, id);
+      store.selectTimer(code, id);
+      broadcast(code);
+      scheduleAutoChain(code, id);
+    }, Math.max(0, delayMs));
+
+    scheduledStartTimers.set(`${code}:${id}`, pending);
+  };
+
   io.on("connection", (socket) => {
     socket.on("room:join", (code) => {
       socket.join(code);
       socket.emit("room:state", { ...store.getState(code), now: Date.now() });
     });
 
-    socket.on("timer:create", ({ code, name, durationSec }) => {
-      store.createTimer(code, name, durationSec);
+    socket.on("timer:create", ({ code, name, durationSec, scheduledStartAt }) => {
+      const timer = store.createTimer(code, name, durationSec, scheduledStartAt ?? null);
       broadcast(code);
+      if (scheduledStartAt) scheduleStart(code, timer.id);
     });
 
     socket.on("timer:delete", ({ code, id }) => {
       cancelAutoChain(code, id);
+      cancelScheduledStart(code, id);
       store.deleteTimer(code, id);
       broadcast(code);
     });
@@ -78,6 +110,7 @@ app.prepare().then(() => {
 
     socket.on("timer:start", ({ code, id }) => {
       store.start(code, id);
+      cancelScheduledStart(code, id);
       scheduleAutoChain(code, id);
       broadcast(code);
     });
@@ -126,6 +159,12 @@ app.prepare().then(() => {
     socket.on("timer:seek", ({ code, id, remainingSec }) => {
       store.seek(code, id, remainingSec);
       scheduleAutoChain(code, id);
+      broadcast(code);
+    });
+
+    socket.on("timer:schedule", ({ code, id, startAt }) => {
+      store.setScheduledStart(code, id, startAt);
+      scheduleStart(code, id);
       broadcast(code);
     });
 

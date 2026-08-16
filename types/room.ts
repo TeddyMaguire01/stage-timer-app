@@ -11,6 +11,8 @@ export interface TimerState {
   status: TimerStatus;
   /** If set, this timer auto-starts and becomes the active display timer the moment this timer hits zero. */
   linkedNextId: string | null;
+  /** If set (and the timer is idle), it auto-starts itself at this wall-clock time. */
+  scheduledStartAt: number | null;
 }
 
 export interface FlagState {
@@ -30,7 +32,12 @@ export type RoomStateMessage = RoomState & { now: number };
 
 export interface ClientToServerEvents {
   "room:join": (code: string) => void;
-  "timer:create": (payload: { code: string; name: string; durationSec: number }) => void;
+  "timer:create": (payload: {
+    code: string;
+    name: string;
+    durationSec: number;
+    scheduledStartAt?: number | null;
+  }) => void;
   "timer:delete": (payload: { code: string; id: string }) => void;
   "timer:select": (payload: { code: string; id: string }) => void;
   "timer:start": (payload: { code: string; id: string }) => void;
@@ -46,6 +53,8 @@ export interface ClientToServerEvents {
   "timer:link": (payload: { code: string; id: string; nextId: string | null }) => void;
   /** Jumps the countdown position without changing the timer's total length (scrubber drag). */
   "timer:seek": (payload: { code: string; id: string; remainingSec: number }) => void;
+  /** Arms (or clears, with startAt: null) an auto-start for this timer at a future wall-clock time. */
+  "timer:schedule": (payload: { code: string; id: string; startAt: number | null }) => void;
   "flag:send": (payload: { code: string; message: string }) => void;
   "flag:clear": (payload: { code: string }) => void;
 }

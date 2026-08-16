@@ -14,10 +14,11 @@ const config: Config = {
           amber: "#f59e0b",
           red: "#ef4444",
         },
-        clay: {
-          400: "#D99075",
-          500: "#CC785C",
-          600: "#B35F45",
+        brand: {
+          pink: "#FF3D8A",
+          "pink-hover": "#FF5FA0",
+          purple: "#8B5CF6",
+          blue: "#3B82F6",
         },
       },
       keyframes: {

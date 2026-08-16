@@ -48,7 +48,7 @@ export function createRoomStore() {
       return findTimer(ensureRoom(code), id);
     },
 
-    createTimer(code: string, name: string, durationSec: number) {
+    createTimer(code: string, name: string, durationSec: number, scheduledStartAt: number | null = null): TimerState {
       const room = ensureRoom(code);
       const timer: TimerState = {
         id: randomUUID(),
@@ -58,9 +58,11 @@ export function createRoomStore() {
         changedAt: Date.now(),
         status: "idle",
         linkedNextId: null,
+        scheduledStartAt,
       };
       room.timers.push(timer);
       if (!room.activeTimerId) room.activeTimerId = timer.id;
+      return timer;
     },
 
     deleteTimer(code: string, id: string) {
@@ -92,6 +94,7 @@ export function createRoomStore() {
       timer.remainingAtChange = currentRemaining(timer);
       timer.changedAt = Date.now();
       timer.status = "running";
+      timer.scheduledStartAt = null;
     },
 
     pause(code: string, id: string) {
@@ -148,6 +151,14 @@ export function createRoomStore() {
       if (!timer) return;
       timer.remainingAtChange = Math.max(0, Math.min(timer.durationSec, remainingSec));
       timer.changedAt = Date.now();
+    },
+
+    /** Arms (or clears, with startAt: null) an auto-start for an idle timer at a future wall-clock time. */
+    setScheduledStart(code: string, id: string, startAt: number | null) {
+      const room = ensureRoom(code);
+      const timer = findTimer(room, id);
+      if (!timer) return;
+      timer.scheduledStartAt = startAt;
     },
 
     /** Links this timer to auto-start `nextId` (or clears the link if nextId is null). */

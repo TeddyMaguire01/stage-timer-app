@@ -3,7 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRoomSocket } from "@/lib/socketClient";
 import { useTick } from "@/lib/useTick";
-import { finishTimeMs, formatClock, formatTimeOfDay, nextOccurrenceOfTime, remainingSeconds } from "@/lib/timerMath";
+import {
+  currentHHMM,
+  finishTimeMs,
+  formatClock,
+  formatTimeOfDay,
+  nextOccurrenceOfTime,
+  remainingSeconds,
+} from "@/lib/timerMath";
 import type { TimerState } from "@/types/room";
 
 type DurationMode = "duration" | "finish";
@@ -17,6 +24,8 @@ export default function Controller({ code }: { code: string }) {
   const [mode, setMode] = useState<DurationMode>("duration");
   const [minutes, setMinutes] = useState(5);
   const [seconds, setSeconds] = useState(0);
+  const [startTimeInput, setStartTimeInput] = useState("");
+  const [startTimeTouched, setStartTimeTouched] = useState(false);
   const [finishTimeInput, setFinishTimeInput] = useState("");
   const [flagText, setFlagText] = useState("");
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -24,7 +33,11 @@ export default function Controller({ code }: { code: string }) {
   // Date.now()-derived text must not render until after hydration, or the
   // server-rendered timestamp (moments earlier) mismatches the client's.
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    setStartTimeInput(currentHHMM(offset));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const displayUrl = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -35,12 +48,20 @@ export default function Controller({ code }: { code: string }) {
   const focusedTimer =
     timers.find((t) => t.id === focusedId) ?? timers.find((t) => t.id === state?.activeTimerId) ?? timers[0] ?? null;
 
+  // A touched Start field arms a real scheduled auto-start; left alone, the
+  // timer is just created idle as usual (operator presses Start manually).
+  const scheduledStartAt = startTimeTouched ? nextOccurrenceOfTime(startTimeInput, offset) : null;
+
   const addPreview = (() => {
     if (!mounted) return "";
     if (mode === "duration") {
       const durationSec = Math.max(0, minutes * 60 + seconds);
       if (durationSec <= 0) return "";
-      return `Finishes at ${formatTimeOfDay(Date.now() + offset + durationSec * 1000)}`;
+      const startAt = scheduledStartAt ?? Date.now() + offset;
+      const endsAt = formatTimeOfDay(startAt + durationSec * 1000);
+      return scheduledStartAt
+        ? `Starts at ${formatTimeOfDay(scheduledStartAt)} · Ends at ${endsAt}`
+        : `Finishes at ${endsAt}`;
     }
     const finishAt = nextOccurrenceOfTime(finishTimeInput, offset);
     if (!finishAt) return "";
@@ -57,8 +78,15 @@ export default function Controller({ code }: { code: string }) {
       if (!finishAt) return;
       durationSec = Math.max(1, Math.round((finishAt - (Date.now() + offset)) / 1000));
     }
-    socket.current?.emit("timer:create", { code, name: name.trim() || "Timer", durationSec });
+    socket.current?.emit("timer:create", {
+      code,
+      name: name.trim() || "Timer",
+      durationSec,
+      scheduledStartAt: mode === "duration" ? scheduledStartAt : null,
+    });
     setName("");
+    setStartTimeTouched(false);
+    setStartTimeInput(currentHHMM(offset));
   };
 
   const copyLink = async () => {
@@ -83,7 +111,7 @@ export default function Controller({ code }: { code: string }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${connected ? "bg-clay-500" : "bg-red-500"}`} />
+          <span className={`h-2 w-2 rounded-full ${connected ? "bg-brand-pink" : "bg-red-500"}`} />
           <span className="text-sm text-stone-400">{connected ? "Connected" : "Disconnected"}</span>
         </div>
 
@@ -96,7 +124,7 @@ export default function Controller({ code }: { code: string }) {
           />
           <button
             onClick={copyLink}
-            className="rounded-md border border-stone-700 px-3 py-2 text-sm hover:border-clay-500"
+            className="rounded-md border border-stone-700 px-3 py-2 text-sm hover:border-brand-pink"
           >
             Copy display link
           </button>
@@ -127,12 +155,24 @@ export default function Controller({ code }: { code: string }) {
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addTimer()}
                   placeholder="e.g. Keynote"
-                  className="rounded-md border border-stone-700 bg-stone-950 px-3 py-2 text-stone-50 outline-none focus:border-clay-500"
+                  className="rounded-md border border-stone-700 bg-stone-950 px-3 py-2 text-stone-50 outline-none focus:border-brand-pink"
                 />
               </div>
 
               {mode === "duration" ? (
                 <>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-stone-500">Start</label>
+                    <input
+                      type="time"
+                      value={startTimeInput}
+                      onChange={(e) => {
+                        setStartTimeInput(e.target.value);
+                        setStartTimeTouched(true);
+                      }}
+                      className="rounded-md border border-stone-700 bg-stone-950 px-3 py-2 font-mono text-stone-50 outline-none focus:border-brand-pink"
+                    />
+                  </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs text-stone-500">Minutes</label>
                     <input
@@ -140,7 +180,7 @@ export default function Controller({ code }: { code: string }) {
                       min={0}
                       value={minutes}
                       onChange={(e) => setMinutes(Math.max(0, Number(e.target.value)))}
-                      className="w-20 rounded-md border border-stone-700 bg-stone-950 px-3 py-2 font-mono text-stone-50 outline-none focus:border-clay-500"
+                      className="w-20 rounded-md border border-stone-700 bg-stone-950 px-3 py-2 font-mono text-stone-50 outline-none focus:border-brand-pink"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
@@ -151,7 +191,7 @@ export default function Controller({ code }: { code: string }) {
                       max={59}
                       value={seconds}
                       onChange={(e) => setSeconds(Math.min(59, Math.max(0, Number(e.target.value))))}
-                      className="w-20 rounded-md border border-stone-700 bg-stone-950 px-3 py-2 font-mono text-stone-50 outline-none focus:border-clay-500"
+                      className="w-20 rounded-md border border-stone-700 bg-stone-950 px-3 py-2 font-mono text-stone-50 outline-none focus:border-brand-pink"
                     />
                   </div>
                 </>
@@ -162,14 +202,14 @@ export default function Controller({ code }: { code: string }) {
                     type="time"
                     value={finishTimeInput}
                     onChange={(e) => setFinishTimeInput(e.target.value)}
-                    className="rounded-md border border-stone-700 bg-stone-950 px-3 py-2 font-mono text-stone-50 outline-none focus:border-clay-500"
+                    className="rounded-md border border-stone-700 bg-stone-950 px-3 py-2 font-mono text-stone-50 outline-none focus:border-brand-pink"
                   />
                 </div>
               )}
 
               <button
                 onClick={addTimer}
-                className="rounded-md bg-clay-500 px-4 py-2 font-semibold text-black hover:bg-clay-400"
+                className="rounded-md bg-brand-pink px-4 py-2 font-semibold text-white hover:bg-brand-pink-hover"
               >
                 Add
               </button>
@@ -212,6 +252,7 @@ export default function Controller({ code }: { code: string }) {
               onSeek={(remainingSec) =>
                 socket.current?.emit("timer:seek", { code, id: focusedTimer.id, remainingSec })
               }
+              onSchedule={(startAt) => socket.current?.emit("timer:schedule", { code, id: focusedTimer.id, startAt })}
             />
           ) : (
             <section className="rounded-md border border-stone-800 bg-stone-900 p-8 text-center text-sm text-stone-500">
@@ -237,13 +278,13 @@ function ModeToggle({ mode, onChange }: { mode: DurationMode; onChange: (mode: D
     <div className="flex overflow-hidden rounded-md border border-stone-700 text-xs">
       <button
         onClick={() => onChange("duration")}
-        className={`px-3 py-1.5 ${mode === "duration" ? "bg-clay-500 text-black" : "text-stone-400 hover:text-stone-50"}`}
+        className={`px-3 py-1.5 ${mode === "duration" ? "bg-brand-pink text-white" : "text-stone-400 hover:text-stone-50"}`}
       >
         Duration
       </button>
       <button
         onClick={() => onChange("finish")}
-        className={`px-3 py-1.5 ${mode === "finish" ? "bg-clay-500 text-black" : "text-stone-400 hover:text-stone-50"}`}
+        className={`px-3 py-1.5 ${mode === "finish" ? "bg-brand-pink text-white" : "text-stone-400 hover:text-stone-50"}`}
       >
         Finish time
       </button>
@@ -279,7 +320,7 @@ function QueueColumn({
             key={timer.id}
             onClick={() => onFocus(timer.id)}
             className={`flex items-center gap-2 rounded-md border px-2 py-2 text-left ${
-              isFocused ? "border-clay-500 bg-stone-800" : "border-transparent hover:bg-stone-800"
+              isFocused ? "border-brand-pink bg-stone-800" : "border-transparent hover:bg-stone-800"
             }`}
           >
             <span
@@ -291,18 +332,33 @@ function QueueColumn({
               }}
               title="Show on display"
               className={`h-3 w-3 shrink-0 rounded-full border ${
-                isOnDisplay ? "border-clay-500 bg-clay-500" : "border-stone-600"
+                isOnDisplay ? "border-brand-pink bg-brand-pink" : "border-stone-600"
               }`}
             />
             <span className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">{timer.name}</div>
-              <div className="text-xs uppercase tracking-widest text-stone-500">{timer.status}</div>
+              <div className="text-xs uppercase tracking-widest text-stone-500">
+                {timer.status === "idle" && timer.scheduledStartAt ? "scheduled" : timer.status}
+              </div>
             </span>
             <span className="text-right">
-              <div className={`font-mono text-sm tabular-nums ${remaining < 0 ? "text-red-500" : "text-stone-300"}`}>
-                {formatClock(remaining)}
-              </div>
-              <div className="font-mono text-[10px] text-stone-500">{formatTimeOfDay(finishTimeMs(timer, offset))}</div>
+              {timer.status === "idle" && timer.scheduledStartAt ? (
+                <>
+                  <div className="font-mono text-sm tabular-nums text-brand-purple">
+                    {formatTimeOfDay(timer.scheduledStartAt)}
+                  </div>
+                  <div className="font-mono text-[10px] text-stone-500">
+                    {formatTimeOfDay(timer.scheduledStartAt + timer.durationSec * 1000)}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className={`font-mono text-sm tabular-nums ${remaining < 0 ? "text-red-500" : "text-stone-300"}`}>
+                    {formatClock(remaining)}
+                  </div>
+                  <div className="font-mono text-[10px] text-stone-500">{formatTimeOfDay(finishTimeMs(timer, offset))}</div>
+                </>
+              )}
             </span>
           </button>
         );
@@ -345,7 +401,7 @@ function Scrubber({
       onTouchEnd={commit}
       onKeyUp={commit}
       onBlur={commit}
-      className="w-full accent-clay-500"
+      className="w-full accent-brand-pink"
       title="Drag to jump the countdown"
     />
   );
@@ -367,6 +423,7 @@ function FocusedTimerPanel({
   onSetFinishTime,
   onLink,
   onSeek,
+  onSchedule,
 }: {
   timer: TimerState;
   isOnDisplay: boolean;
@@ -383,6 +440,7 @@ function FocusedTimerPanel({
   onSetFinishTime: (finishAt: number) => void;
   onLink: (nextId: string | null) => void;
   onSeek: (remainingSec: number) => void;
+  onSchedule: (startAt: number | null) => void;
 }) {
   const remaining = remainingSeconds(timer, clockOffset);
   const isOvertime = remaining < 0;
@@ -430,7 +488,7 @@ function FocusedTimerPanel({
             onClick={onShowOnDisplay}
             title="Show on display"
             className={`h-4 w-4 shrink-0 rounded-full border ${
-              isOnDisplay ? "border-clay-500 bg-clay-500" : "border-stone-600"
+              isOnDisplay ? "border-brand-pink bg-brand-pink" : "border-stone-600"
             }`}
           />
           <div>
@@ -454,6 +512,17 @@ function FocusedTimerPanel({
         </div>
       </div>
 
+      {timer.status === "idle" && timer.scheduledStartAt && (
+        <div className="mt-3 flex items-center justify-between rounded-md border border-brand-purple bg-stone-950 px-3 py-2 text-sm">
+          <span className="text-brand-purple">
+            Scheduled to auto-start at {formatTimeOfDay(timer.scheduledStartAt)}
+          </span>
+          <button onClick={() => onSchedule(null)} className="text-stone-400 hover:text-stone-50">
+            Cancel
+          </button>
+        </div>
+      )}
+
       <div className="mt-4">
         <Scrubber timer={timer} clockOffset={clockOffset} onSeek={onSeek} />
       </div>
@@ -469,7 +538,7 @@ function FocusedTimerPanel({
         ) : (
           <button
             onClick={onStart}
-            className="rounded-md bg-clay-500 px-3 py-1.5 text-sm font-semibold text-black hover:bg-clay-400"
+            className="rounded-md bg-brand-pink px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-pink-hover"
           >
             Start
           </button>
@@ -510,12 +579,12 @@ function FocusedTimerPanel({
           min={1}
           value={customAmount}
           onChange={(e) => setCustomAmount(Math.max(1, Number(e.target.value)))}
-          className="w-16 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 font-mono text-sm text-stone-50 outline-none focus:border-clay-500"
+          className="w-16 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 font-mono text-sm text-stone-50 outline-none focus:border-brand-pink"
         />
         <select
           value={customUnit}
           onChange={(e) => setCustomUnit(e.target.value as "sec" | "min")}
-          className="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-sm text-stone-50 outline-none focus:border-clay-500"
+          className="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-sm text-stone-50 outline-none focus:border-brand-pink"
         >
           <option value="sec">sec</option>
           <option value="min">min</option>
@@ -531,7 +600,7 @@ function FocusedTimerPanel({
         <select
           value={timer.linkedNextId ?? ""}
           onChange={(e) => onLink(e.target.value || null)}
-          className="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-sm text-stone-50 outline-none focus:border-clay-500"
+          className="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-sm text-stone-50 outline-none focus:border-brand-pink"
         >
           <option value="">None</option>
           {linkOptions.map((t) => (
@@ -549,7 +618,7 @@ function FocusedTimerPanel({
             <input
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
-              className="rounded-md border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-50 outline-none focus:border-clay-500"
+              className="rounded-md border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-50 outline-none focus:border-brand-pink"
             />
           </div>
 
@@ -564,7 +633,7 @@ function FocusedTimerPanel({
                   min={0}
                   value={editMinutes}
                   onChange={(e) => setEditMinutes(Math.max(0, Number(e.target.value)))}
-                  className="w-20 rounded-md border border-stone-700 bg-stone-900 px-3 py-2 font-mono text-sm text-stone-50 outline-none focus:border-clay-500"
+                  className="w-20 rounded-md border border-stone-700 bg-stone-900 px-3 py-2 font-mono text-sm text-stone-50 outline-none focus:border-brand-pink"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -575,7 +644,7 @@ function FocusedTimerPanel({
                   max={59}
                   value={editSeconds}
                   onChange={(e) => setEditSeconds(Math.min(59, Math.max(0, Number(e.target.value))))}
-                  className="w-20 rounded-md border border-stone-700 bg-stone-900 px-3 py-2 font-mono text-sm text-stone-50 outline-none focus:border-clay-500"
+                  className="w-20 rounded-md border border-stone-700 bg-stone-900 px-3 py-2 font-mono text-sm text-stone-50 outline-none focus:border-brand-pink"
                 />
               </div>
             </>
@@ -586,14 +655,14 @@ function FocusedTimerPanel({
                 type="time"
                 value={editFinishTimeInput}
                 onChange={(e) => setEditFinishTimeInput(e.target.value)}
-                className="rounded-md border border-stone-700 bg-stone-900 px-3 py-2 font-mono text-sm text-stone-50 outline-none focus:border-clay-500"
+                className="rounded-md border border-stone-700 bg-stone-900 px-3 py-2 font-mono text-sm text-stone-50 outline-none focus:border-brand-pink"
               />
             </div>
           )}
 
           <button
             onClick={applyEdit}
-            className="rounded-md bg-clay-500 px-4 py-2 text-sm font-semibold text-black hover:bg-clay-400"
+            className="rounded-md bg-brand-pink px-4 py-2 text-sm font-semibold text-white hover:bg-brand-pink-hover"
           >
             Apply
           </button>
