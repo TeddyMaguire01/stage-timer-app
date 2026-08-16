@@ -1,11 +1,6 @@
 # Stage Timer
 
-A real-time stage countdown timer, similar to StageTimer.io. An operator
-controls one or more named timers from a **Controller** view; an audience or
-speaker-facing **Display** view shows the active timer's big countdown,
-color-coded by time remaining, and any flag message the operator sends. Both
-views are joined by a room code in the URL and stay in sync over WebSockets
-(Socket.io), typically within ~200ms.
+
 
 ## Tech stack
 
