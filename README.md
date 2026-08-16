@@ -151,3 +151,25 @@ app/room/[code]/display/           # audience/speaker view (read-only)
 - Clock sync between controller/display relies on each client reconciling
   against the server's clock on every update; this is robust in practice but
   not cryptographically synced NTP-grade timing.
+
+
+  Once Node.js is installed, here's the full sequence:
+
+1. Get the code onto the machine (only need this once):
+
+2. Install the project's dependencies (downloads everything into a node_modules folder — takes a minute or two):
+
+If you hit the "running scripts is disabled" error, use npm.cmd install instead of npm install.
+
+3. Start the app:
+
+Wait for it to print "Stage Timer ready on http://localhost:3000". This window now stays busy running the server — leave it open.
+
+4. Open it in a browser:
+
+Click Create a new room, and you're in the Controller. Copy the display link into a second tab to see the Display view.
+
+Later, to get updates (whenever I've pushed changes): open a different, non-busy terminal window, cd into the folder, run git pull, then go back to the server window, Ctrl+C to stop it, and npm.cmd run dev again to restart with the new code.
+
+That's the whole loop: clone once → install once → then it's just start/stop/pull as needed.
+
