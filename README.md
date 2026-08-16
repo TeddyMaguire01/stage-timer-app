@@ -153,7 +153,10 @@ app/room/[code]/display/           # audience/speaker view (read-only)
   not cryptographically synced NTP-grade timing.
 
 
-  Once Node.js is installed, here's the full sequence:
+
+
+
+##Once Node.js is installed, here's the full sequence:
 
 1. Get the code onto the machine (only need this once):
 
