@@ -123,6 +123,12 @@ app.prepare().then(() => {
       broadcast(code);
     });
 
+    socket.on("timer:seek", ({ code, id, remainingSec }) => {
+      store.seek(code, id, remainingSec);
+      scheduleAutoChain(code, id);
+      broadcast(code);
+    });
+
     socket.on("flag:send", ({ code, message }) => {
       store.setFlag(code, message);
       broadcast(code);

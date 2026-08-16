@@ -44,6 +44,8 @@ export interface ClientToServerEvents {
   "timer:setFinishTime": (payload: { code: string; id: string; finishAt: number }) => void;
   /** Sets (or clears, with nextId: null) which timer auto-starts when this one hits zero. */
   "timer:link": (payload: { code: string; id: string; nextId: string | null }) => void;
+  /** Jumps the countdown position without changing the timer's total length (scrubber drag). */
+  "timer:seek": (payload: { code: string; id: string; remainingSec: number }) => void;
   "flag:send": (payload: { code: string; message: string }) => void;
   "flag:clear": (payload: { code: string }) => void;
 }

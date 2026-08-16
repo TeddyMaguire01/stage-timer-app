@@ -141,6 +141,15 @@ export function createRoomStore() {
       timer.changedAt = Date.now();
     },
 
+    /** Jumps the countdown position (e.g. scrubber drag) without touching the total-length baseline. */
+    seek(code: string, id: string, remainingSec: number) {
+      const room = ensureRoom(code);
+      const timer = findTimer(room, id);
+      if (!timer) return;
+      timer.remainingAtChange = Math.max(0, Math.min(timer.durationSec, remainingSec));
+      timer.changedAt = Date.now();
+    },
+
     /** Links this timer to auto-start `nextId` (or clears the link if nextId is null). */
     setLink(code: string, id: string, nextId: string | null) {
       const room = ensureRoom(code);
