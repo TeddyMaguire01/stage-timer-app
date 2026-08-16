@@ -48,7 +48,13 @@ export function createRoomStore() {
       return findTimer(ensureRoom(code), id);
     },
 
-    createTimer(code: string, name: string, durationSec: number, scheduledStartAt: number | null = null): TimerState {
+    createTimer(
+      code: string,
+      name: string,
+      durationSec: number,
+      scheduledStartAt: number | null = null,
+      speakerName = ""
+    ): TimerState {
       const room = ensureRoom(code);
       const timer: TimerState = {
         id: randomUUID(),
@@ -59,6 +65,7 @@ export function createRoomStore() {
         status: "idle",
         linkedNextId: null,
         scheduledStartAt,
+        speakerName: speakerName.trim(),
       };
       room.timers.push(timer);
       if (!room.activeTimerId) room.activeTimerId = timer.id;
@@ -85,6 +92,12 @@ export function createRoomStore() {
       const room = ensureRoom(code);
       const timer = findTimer(room, id);
       if (timer && name.trim()) timer.name = name.trim();
+    },
+
+    setSpeakerName(code: string, id: string, speakerName: string) {
+      const room = ensureRoom(code);
+      const timer = findTimer(room, id);
+      if (timer) timer.speakerName = speakerName.trim();
     },
 
     start(code: string, id: string) {

@@ -18,6 +18,7 @@ const config: Config = {
           pink: "#FF3D8A",
           "pink-hover": "#FF5FA0",
           purple: "#8B5CF6",
+          "purple-hover": "#A78BFA",
           blue: "#3B82F6",
         },
       },

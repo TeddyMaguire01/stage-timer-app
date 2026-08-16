@@ -13,6 +13,8 @@ export interface TimerState {
   linkedNextId: string | null;
   /** If set (and the timer is idle), it auto-starts itself at this wall-clock time. */
   scheduledStartAt: number | null;
+  /** Who's speaking during this timer — shown alongside the timer name. */
+  speakerName: string;
 }
 
 export interface FlagState {
@@ -37,6 +39,7 @@ export interface ClientToServerEvents {
     name: string;
     durationSec: number;
     scheduledStartAt?: number | null;
+    speakerName?: string;
   }) => void;
   "timer:delete": (payload: { code: string; id: string }) => void;
   "timer:select": (payload: { code: string; id: string }) => void;
@@ -45,6 +48,7 @@ export interface ClientToServerEvents {
   "timer:reset": (payload: { code: string; id: string }) => void;
   "timer:adjust": (payload: { code: string; id: string; deltaSec: number }) => void;
   "timer:rename": (payload: { code: string; id: string; name: string }) => void;
+  "timer:setSpeaker": (payload: { code: string; id: string; speakerName: string }) => void;
   /** Sets the timer's total length directly (both the countdown baseline and remaining time). */
   "timer:setDuration": (payload: { code: string; id: string; durationSec: number }) => void;
   /** Sets the timer's length so it hits zero at this wall-clock time (epoch ms). */

@@ -21,6 +21,7 @@ export default function Controller({ code }: { code: string }) {
   const offset = clockOffsetRef.current;
 
   const [name, setName] = useState("");
+  const [speakerName, setSpeakerName] = useState("");
   const [mode, setMode] = useState<DurationMode>("duration");
   const [minutes, setMinutes] = useState(5);
   const [seconds, setSeconds] = useState(0);
@@ -83,8 +84,10 @@ export default function Controller({ code }: { code: string }) {
       name: name.trim() || "Timer",
       durationSec,
       scheduledStartAt: mode === "duration" ? scheduledStartAt : null,
+      speakerName,
     });
     setName("");
+    setSpeakerName("");
     setStartTimeTouched(false);
     setStartTimeInput(currentHHMM(offset));
   };
@@ -143,7 +146,7 @@ export default function Controller({ code }: { code: string }) {
 
         <div className="flex flex-col gap-6">
           <section className="rounded-md border border-stone-800 bg-stone-900 p-5">
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between border-b border-stone-600 pb-3">
               <h2 className="text-sm font-semibold uppercase tracking-widest text-stone-500">Add timer</h2>
               <ModeToggle mode={mode} onChange={setMode} />
             </div>
@@ -155,6 +158,17 @@ export default function Controller({ code }: { code: string }) {
                   onChange={(e) => setName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addTimer()}
                   placeholder="e.g. Keynote"
+                  className="rounded-md border border-stone-700 bg-stone-950 px-3 py-2 text-stone-50 outline-none focus:border-brand-pink"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-stone-500">Speaker</label>
+                <input
+                  value={speakerName}
+                  onChange={(e) => setSpeakerName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addTimer()}
+                  placeholder="e.g. Jane Doe"
                   className="rounded-md border border-stone-700 bg-stone-950 px-3 py-2 text-stone-50 outline-none focus:border-brand-pink"
                 />
               </div>
@@ -242,6 +256,9 @@ export default function Controller({ code }: { code: string }) {
                 setFocusedId(null);
               }}
               onRename={(newName) => socket.current?.emit("timer:rename", { code, id: focusedTimer.id, name: newName })}
+              onSetSpeaker={(speaker) =>
+                socket.current?.emit("timer:setSpeaker", { code, id: focusedTimer.id, speakerName: speaker })
+              }
               onSetDuration={(durationSec) =>
                 socket.current?.emit("timer:setDuration", { code, id: focusedTimer.id, durationSec })
               }
@@ -309,7 +326,9 @@ function QueueColumn({
 }) {
   return (
     <section className="flex flex-col gap-2 rounded-md border border-stone-800 bg-stone-900 p-3 lg:h-fit">
-      <h2 className="px-1 pb-1 text-sm font-semibold uppercase tracking-widest text-stone-500">Queue</h2>
+      <h2 className="border-b border-stone-600 px-1 pb-2 text-sm font-semibold uppercase tracking-widest text-stone-500">
+        Queue
+      </h2>
       {timers.length === 0 && <p className="px-1 text-sm text-stone-500">No timers yet.</p>}
       {timers.map((timer) => {
         const remaining = remainingSeconds(timer, offset);
@@ -337,6 +356,7 @@ function QueueColumn({
             />
             <span className="min-w-0 flex-1">
               <div className="truncate text-sm font-medium">{timer.name}</div>
+              {timer.speakerName && <div className="truncate text-xs text-stone-400">{timer.speakerName}</div>}
               <div className="text-xs uppercase tracking-widest text-stone-500">
                 {timer.status === "idle" && timer.scheduledStartAt ? "scheduled" : timer.status}
               </div>
@@ -419,6 +439,7 @@ function FocusedTimerPanel({
   onAdjust,
   onDelete,
   onRename,
+  onSetSpeaker,
   onSetDuration,
   onSetFinishTime,
   onLink,
@@ -436,6 +457,7 @@ function FocusedTimerPanel({
   onAdjust: (deltaSec: number) => void;
   onDelete: () => void;
   onRename: (name: string) => void;
+  onSetSpeaker: (speakerName: string) => void;
   onSetDuration: (durationSec: number) => void;
   onSetFinishTime: (finishAt: number) => void;
   onLink: (nextId: string | null) => void;
@@ -447,6 +469,7 @@ function FocusedTimerPanel({
 
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState(timer.name);
+  const [editSpeaker, setEditSpeaker] = useState(timer.speakerName);
   const [editMode, setEditMode] = useState<DurationMode>("duration");
   const [editMinutes, setEditMinutes] = useState(Math.floor(timer.durationSec / 60));
   const [editSeconds, setEditSeconds] = useState(timer.durationSec % 60);
@@ -457,6 +480,7 @@ function FocusedTimerPanel({
 
   const openEdit = () => {
     setEditName(timer.name);
+    setEditSpeaker(timer.speakerName);
     setEditMode("duration");
     setEditMinutes(Math.floor(timer.durationSec / 60));
     setEditSeconds(timer.durationSec % 60);
@@ -467,6 +491,7 @@ function FocusedTimerPanel({
   const applyEdit = () => {
     const trimmed = editName.trim();
     if (trimmed && trimmed !== timer.name) onRename(trimmed);
+    if (editSpeaker.trim() !== timer.speakerName) onSetSpeaker(editSpeaker.trim());
 
     if (editMode === "duration") {
       onSetDuration(Math.max(1, editMinutes * 60 + editSeconds));
@@ -482,7 +507,7 @@ function FocusedTimerPanel({
 
   return (
     <section className="rounded-md border border-stone-800 bg-stone-900 p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-600 pb-4">
         <div className="flex items-center gap-3">
           <button
             onClick={onShowOnDisplay}
@@ -493,6 +518,7 @@ function FocusedTimerPanel({
           />
           <div>
             <div className="text-lg font-medium">{timer.name}</div>
+            {timer.speakerName && <div className="text-sm text-stone-400">{timer.speakerName}</div>}
             <div className="text-xs uppercase tracking-widest text-stone-500">{timer.status}</div>
           </div>
         </div>
@@ -531,7 +557,7 @@ function FocusedTimerPanel({
         {timer.status === "running" ? (
           <button
             onClick={onPause}
-            className="rounded-md bg-amber-400 px-3 py-1.5 text-sm font-semibold text-black hover:bg-amber-300"
+            className="rounded-md bg-brand-purple px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-purple-hover"
           >
             Pause
           </button>
@@ -622,6 +648,16 @@ function FocusedTimerPanel({
             />
           </div>
 
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-stone-500">Speaker</label>
+            <input
+              value={editSpeaker}
+              onChange={(e) => setEditSpeaker(e.target.value)}
+              placeholder="e.g. Jane Doe"
+              className="rounded-md border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-50 outline-none focus:border-brand-pink"
+            />
+          </div>
+
           <ModeToggle mode={editMode} onChange={setEditMode} />
 
           {editMode === "duration" ? (
@@ -687,18 +723,20 @@ function MessagesColumn({
 }) {
   return (
     <section className="flex flex-col gap-3 rounded-md border border-stone-800 bg-stone-900 p-4 lg:h-fit">
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-stone-500">Messages</h2>
+      <h2 className="border-b border-stone-600 pb-2 text-sm font-semibold uppercase tracking-widest text-stone-500">
+        Messages
+      </h2>
       <textarea
         value={flagText}
         onChange={(e) => onFlagTextChange(e.target.value)}
         placeholder="e.g. Wrap it up"
         rows={3}
-        className="resize-none rounded-md border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-50 outline-none focus:border-amber-400"
+        className="resize-none rounded-md border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-50 outline-none focus:border-brand-purple"
       />
       <div className="flex gap-2">
         <button
           onClick={onSend}
-          className="flex-1 rounded-md bg-amber-400 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-300"
+          className="flex-1 rounded-md bg-brand-purple px-4 py-2 text-sm font-semibold text-white hover:bg-brand-purple-hover"
         >
           Send
         </button>
@@ -709,7 +747,9 @@ function MessagesColumn({
           Clear
         </button>
       </div>
-      {flag && <p className="text-sm text-amber-300">Live on display: &ldquo;{flag.message}&rdquo;</p>}
+      {flag && (
+        <p className="text-sm text-brand-purple-hover">Live on display: &ldquo;{flag.message}&rdquo;</p>
+      )}
     </section>
   );
 }

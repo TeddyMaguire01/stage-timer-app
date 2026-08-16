@@ -90,8 +90,8 @@ app.prepare().then(() => {
       socket.emit("room:state", { ...store.getState(code), now: Date.now() });
     });
 
-    socket.on("timer:create", ({ code, name, durationSec, scheduledStartAt }) => {
-      const timer = store.createTimer(code, name, durationSec, scheduledStartAt ?? null);
+    socket.on("timer:create", ({ code, name, durationSec, scheduledStartAt, speakerName }) => {
+      const timer = store.createTimer(code, name, durationSec, scheduledStartAt ?? null, speakerName ?? "");
       broadcast(code);
       if (scheduledStartAt) scheduleStart(code, timer.id);
     });
@@ -135,6 +135,11 @@ app.prepare().then(() => {
 
     socket.on("timer:rename", ({ code, id, name }) => {
       store.rename(code, id, name);
+      broadcast(code);
+    });
+
+    socket.on("timer:setSpeaker", ({ code, id, speakerName }) => {
+      store.setSpeakerName(code, id, speakerName);
       broadcast(code);
     });
 

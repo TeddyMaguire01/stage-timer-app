@@ -32,7 +32,10 @@ export default function Display({ code }: { code: string }) {
 
       {activeTimer && (
         <>
-          <div className="text-2xl text-stone-400">{activeTimer.name}</div>
+          <div className="text-center">
+            <div className="text-2xl text-stone-400">{activeTimer.name}</div>
+            {activeTimer.speakerName && <div className="text-lg text-stone-500">{activeTimer.speakerName}</div>}
+          </div>
           <div className={`font-mono text-[18vw] font-bold leading-none tabular-nums ${colorClass}`}>
             {formatClock(remaining)}
           </div>
@@ -43,7 +46,7 @@ export default function Display({ code }: { code: string }) {
       )}
 
       {state?.flag && (
-        <div className="fixed inset-x-0 bottom-0 bg-amber-400 px-4 py-6 text-center text-3xl font-semibold text-black">
+        <div className="fixed inset-x-0 bottom-0 bg-brand-purple px-4 py-6 text-center text-3xl font-semibold text-white">
           {state.flag.message}
         </div>
       )}
